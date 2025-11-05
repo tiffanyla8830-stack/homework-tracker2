@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homework Tracker</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter Font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+    <div class="max-w-4xl mx-auto bg-white shadow-xl rounded-2xl p-6 md:p-10">
+
+        <!-- Header and Status -->
+        <header class="mb-8 border-b pb-4">
+            <h1 class="text-3xl font-bold text-gray-800 mb-1">Homework Tracker</h1>
+            <p class="text-gray-500">
+                Data saved only in your browser. This is a fallback due to configuration errors.
+            </p>
+            <div class="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium">
+                ⚠️ **Note:** All data is saved locally on your device.
+            </div>
+        </header>
+
+        <!-- New Assignment Form -->
+        <section class="mb-10 p-6 bg-indigo-50 rounded-xl shadow-inner">
+            <h2 class="text-xl font-semibold text-indigo-800 mb-4">Add New Assignment</h2>
+            <form id="assignment-form" class="space-y-4">
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700">Homework Details</label>
+                    <input type="text" id="title" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 p-2 border" placeholder="e.g., Chapter 5 worksheet, Essay draft">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- SUBJECT DROPDOWN MENU -->
+                    <div>
+                        <label for="course-select" class="block text-sm font-medium text-gray-700">Subject</label>
+                        <select id="course-select" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 p-2 border bg-white appearance-none">
+                            <option value="" disabled selected>Select a Subject</option>
+                            <option value="History">History</option>
+                            <option value="RE">RE (Religious Education)</option>
+                            <option value="English">English</option>
+                            <option value="French">French</option>
+                            <option value="Maths">Maths</option>
+                            <option value="Physics">Physics</option>
+                            <option value="PE">PE (Physical Education)</option>
+                            <option value="Personal Dev">Personal Dev (Development)</option>
+                            <option value="Art">Art</option>
+                            <option value="ICT">ICT (Information & Comms Tech)</option>
+                            <option value="Geography">Geography</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Chemistry">Chemistry</option>
+                            <option value="Biology">Biology</option>
+                            <option value="Music">Music</option>
+                            <option value="Drama">Drama</option>
+                            <option value="other-custom">Other / Add New Subject</option>
+                        </select>
+                    </div>
+                    <!-- DUE DATE INPUT -->
+                    <div>
+                        <label for="due-date" class="block text-sm font-medium text-gray-700">Due Date</label>
+                        <input type="date" id="due-date" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 p-2 border">
+                    </div>
+                </div>
+
+                <!-- Custom Subject Input (Initially Hidden) -->
+                <div id="custom-course-field" class="hidden">
+                    <label for="course-custom" class="block text-sm font-medium text-gray-700">Enter Custom Subject Name</label>
+                    <input type="text" id="course-custom" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 p-2 border" placeholder="e.g., Computer Science, Robotics">
+                </div>
+
+                <!-- Button is full width on mobile (w-full) -->
+                <button type="submit" class="w-full md:w-auto px-6 py-2 border border-transparent text-base font-medium rounded-lg shadow-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                    Add Homework
+                </button>
+            </form>
+            <div id="status-message" class="mt-4 hidden text-sm font-medium p-2 rounded-lg"></div>
+        </section>
+
+        <!-- Upcoming Assignment List -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Upcoming Homework</h2>
+            <div class="space-y-3" id="upcoming-list">
+                <p class="text-center text-gray-500 p-6" id="loading-indicator">Loading assignments from local storage...</p>
+                <!-- Upcoming Assignments will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Completed Assignment Section -->
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-gray-800">Completed Homework</h2>
+                <button id="clear-completed-btn" class="px-3 py-1 text-sm text-red-600 border border-red-300 bg-white rounded-lg shadow-sm hover:bg-red-50 transition duration-150 ease-in-out hidden">
+                    Clear Completed
+                </button>
+            </div>
+            <div class="space-y-3" id="completed-list">
+                <!-- Completed Assignments will be loaded here -->
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // --- LOCAL STORAGE KEY ---
+        const STORAGE_KEY = 'studentAssignments';
+
+        // --- DOM Elements ---
+        const courseSelect = document.getElementById('course-select');
+        const customCourseField = document.getElementById('custom-course-field');
+        const customCourseInput = document.getElementById('course-custom');
+
+
+        // --- Event Listener for Custom Subject Visibility ---
+        courseSelect.addEventListener('change', () => {
+            if (courseSelect.value === 'other-custom') {
+                customCourseField.classList.remove('hidden');
+                customCourseInput.setAttribute('required', 'required'); // Require input if custom is selected
+            } else {
+                customCourseField.classList.add('hidden');
+                customCourseInput.removeAttribute('required'); // Remove required if a standard subject is selected
+                customCourseInput.value = ''; // Clear custom input
+            }
+        });
+
+
+        /**
+         * Loads assignments from local storage.
+         * @returns {Array} List of assignments.
+         */
+        function loadAssignments() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                console.error("Could not load data from local storage:", e);
+                return [];
+            }
+        }
+
+        /**
+         * Saves the current list of assignments to local storage.
+         * @param {Array} assignments - The list of assignments to save.
+         */
+        function saveAssignments(assignments) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(assignments));
+            } catch (e) {
+                console.error("Could not save data to local storage:", e);
+            }
+        }
+
+        /**
+         * Displays a temporary status message to the user.
+         */
+        function showStatus(message, className) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = `mt-4 text-sm font-medium p-2 rounded-lg ${className}`;
+            statusDiv.classList.remove('hidden');
+
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+                statusDiv.className = 'mt-4 hidden text-sm font-medium p-2 rounded-lg';
+            }, 3000);
+        }
+
+        /**
+         * Removes all completed assignments and updates storage/UI.
+         */
+        function clearCompletedAssignments() {
+            let assignments = loadAssignments();
+            const incompleteAssignments = assignments.filter(a => !a.isCompleted);
+            
+            if (assignments.length === incompleteAssignments.length) {
+                showStatus('There are no completed homework items to clear.', 'bg-yellow-100 text-yellow-700');
+                return;
+            }
+
+            saveAssignments(incompleteAssignments);
+            showStatus('Completed homework cleared!', 'bg-green-100 text-green-700');
+            refreshUI();
+        }
+
+        /**
+         * Rerenders the entire application list.
+         */
+        function refreshUI() {
+            const allAssignments = loadAssignments();
+            const loadingIndicator = document.getElementById('loading-indicator');
+            
+            if (loadingIndicator) {
+                loadingIndicator.classList.add('hidden');
+            }
+
+            // 1. Separate and Sort
+            const upcomingAssignments = allAssignments
+                .filter(a => !a.isCompleted)
+                .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)); // Sort upcoming by due date
+
+            const completedAssignments = allAssignments
+                .filter(a => a.isCompleted)
+                .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)); // Sort completed by due date
+
+            // 2. Render Lists
+            renderAssignments(upcomingAssignments, document.getElementById('upcoming-list'), false);
+            renderAssignments(completedAssignments, document.getElementById('completed-list'), true);
+
+            // 3. Manage Clear Button Visibility
+            const clearBtn = document.getElementById('clear-completed-btn');
+            if (completedAssignments.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Renders the list of assignments to a specific container.
+         */
+        function renderAssignments(assignments, container, isCompletedList) {
+            container.innerHTML = '';
+            
+            if (assignments.length === 0) {
+                const message = isCompletedList 
+                    ? `No homework completed yet. Keep working!` 
+                    : `No upcoming homework. Time to relax!`;
+                container.innerHTML = `<p class="text-center text-gray-500 p-6 border border-dashed rounded-lg">${message}</p>`;
+                return;
+            }
+
+            assignments.forEach(assignment => {
+                const isCompleted = assignment.isCompleted || false;
+                const cardClass = isCompleted ? 'bg-green-50 opacity-70' : 'bg-white hover:shadow-lg transition duration-200';
+                const textClass = isCompleted ? 'text-gray-400 line-through' : 'text-gray-800';
+                const dueDate = assignment.dueDate;
+                
+                // Calculate if the assignment is overdue
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const assignmentDate = new Date(dueDate);
+                assignmentDate.setHours(0, 0, 0, 0);
+
+                const isOverdue = !isCompleted && assignmentDate < today;
+                
+                let dateBadge = '';
+                if (isOverdue) {
+                    dateBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">OVERDUE</span>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = `flex justify-between items-center p-4 rounded-xl shadow ${cardClass} border border-gray-200`;
+                card.innerHTML = `
+                    <div class="flex items-center space-x-4 flex-grow min-w-0">
+                        <input type="checkbox" data-id="${assignment.id}" ${isCompleted ? 'checked' : ''} class="toggle-complete h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 focus:ring-2 cursor-pointer">
+                        <div class="min-w-0 flex-grow">
+                            <!-- truncate class ensures long titles don't break mobile layout -->
+                            <p class="text-lg font-semibold truncate ${textClass}" title="${assignment.title}">${assignment.title}</p>
+                            <div class="text-sm text-gray-500 flex items-center flex-wrap">
+                                <span class="font-medium text-indigo-600">${assignment.course}</span> 
+                                <span class="mx-1">&middot;</span>
+                                <span class="font-medium">Due: ${dueDate}</span>
+                                ${dateBadge}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Delete button acts as a large touch target -->
+                    <button data-id="${assignment.id}" class="delete-btn text-red-500 hover:text-red-700 p-2 rounded-full transition duration-150">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+
+        /**
+         * Handles form submission to add a new assignment.
+         */
+        document.getElementById('assignment-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('title').value.trim();
+            const dueDate = document.getElementById('due-date').value;
+            
+            let course;
+            const selectedCourseValue = courseSelect.value;
+
+            // Determine the final course value
+            if (selectedCourseValue === 'other-custom') {
+                // Use the value from the custom text input
+                course = customCourseInput.value.trim();
+            } else {
+                // Use the value from the standard dropdown
+                course = selectedCourseValue;
+            }
+
+            // Validation check (especially important for custom field)
+            if (!title || !course || !dueDate || course === 'other-custom') {
+                showStatus('Please ensure the homework details, a subject, and due date are entered.', 'bg-red-100 text-red-700');
+                return;
+            }
+
+            const assignments = loadAssignments();
+            
+            // Generate a simple unique ID
+            const newId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+
+            const newAssignment = {
+                id: newId,
+                title,
+                course, // This is the determined course (standard or custom)
+                dueDate,
+                isCompleted: false, // Always starts as incomplete
+                createdAt: new Date().toISOString()
+            };
+
+            assignments.push(newAssignment);
+            saveAssignments(assignments);
+
+            document.getElementById('assignment-form').reset();
+            // Reset state
+            courseSelect.value = ''; 
+            customCourseField.classList.add('hidden');
+            customCourseInput.removeAttribute('required');
+            customCourseInput.value = '';
+
+            showStatus('Assignment added successfully!', 'bg-green-100 text-green-700');
+            refreshUI();
+        });
+
+        /**
+         * Handles clicks for toggling completion and deleting assignments, delegated from the main list wrapper.
+         * The delegated listener listens on the parent of both upcoming and completed lists.
+         */
+        document.querySelector('.max-w-4xl').addEventListener('click', (e) => {
+            const target = e.target;
+            let assignments = loadAssignments();
+            let changed = false;
+
+            // Handle Checkbox Toggle
+            if (target.classList.contains('toggle-complete')) {
+                const id = target.dataset.id;
+                const isCompleted = target.checked;
+                
+                assignments = assignments.map(a => {
+                    if (a.id === id) {
+                        changed = true;
+                        return { ...a, isCompleted: isCompleted };
+                    }
+                    return a;
+                });
+            } 
+            
+            // Handle Delete Button (Use closest for touch targets)
+            else if (target.closest('.delete-btn')) {
+                const id = target.closest('.delete-btn').dataset.id;
+                
+                const initialLength = assignments.length;
+                assignments = assignments.filter(a => a.id !== id);
+                if (assignments.length < initialLength) changed = true;
+            }
+
+            // Handle Clear Completed Button
+            else if (target.id === 'clear-completed-btn') {
+                clearCompletedAssignments();
+                return; // UI is refreshed inside clearCompletedAssignments
+            }
+
+
+            if (changed) {
+                saveAssignments(assignments);
+                refreshUI();
+            }
+        });
+
+        // Initialize the UI on page load
+        window.onload = refreshUI;
+    </script>
+</body>
+</html>

@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homework Tracker</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Load Lucide icons (Loaded via JS module later, but keeping for reference) -->
+    <!-- <script type="module" src="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.js"></script> -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom checkbox style */
+        .task-checkbox:checked + .task-text {
+            text-decoration: line-through;
+            color: #6b7280; /* gray-500 */
+        }
+        .task-checkbox:checked ~ .task-due {
+            text-decoration: line-through;
+            color: #6b7280; /* gray-500 */
+        }
+        .task-card:has(.task-checkbox:checked) {
+            background-color: #f9fafb; /* gray-50 */
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body class="bg-purple-50 text-gray-900">
+
+    <div class="container mx-auto max-w-3xl p-4 md:p-8">
+        <header class="mb-8 text-center relative">
+            <h1 class="text-4xl font-bold text-purple-600">GiGi's Home Work Tracker</h1>
+            <p class="text-lg text-gray-600 mt-2">Stay organized and never miss a due date!</p>
+            
+            <!-- Parent Mode Toggle Button -->
+            <button id="parent-mode-btn" class="absolute top-0 right-0 p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500">
+                Parent Mode
+            </button>
+        </header>
+
+        <!-- Parent Mode Status Indicator -->
+        <section id="parent-status-section" class="bg-purple-700 text-white p-3 rounded-lg shadow-md mb-4 flex justify-between items-center" style="display: none;">
+            <p class="font-medium">You are in Parent Mode (Passcode: 1234). Manage rewards below.</p>
+            <button id="parent-signout-btn" class="p-1 bg-purple-800 hover:bg-purple-900 rounded-md text-sm transition-colors">
+                Sign Out
+            </button>
+        </section>
+
+        <!-- Total Points Display -->
+        <section class="mb-8">
+            <div class="bg-purple-600 text-white p-6 rounded-lg shadow-md text-center">
+                <h2 class="text-lg font-medium uppercase tracking-wider">Total Points</h2>
+                <div id="points-display" class="text-5xl font-bold mt-2">0</div>
+            </div>
+        </section>
+
+        <!-- Reminder Section -->
+        <section id="reminder-section" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-lg shadow-md mb-8" style="display: none;">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Due Soon!</h2>
+                <button id="close-reminder-btn" class="text-yellow-700 hover:text-yellow-900" title="Dismiss">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><line x1="18" x2="6" y1="6" y2="18"></line><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                </button>
+            </div>
+            <ul id="reminder-list" class="list-disc list-inside mt-2 space-y-1">
+                <!-- Reminders will be dynamically inserted here -->
+            </ul>
+        </section>
+
+        <!-- Homework Input Form -->
+        <section class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Add New Assignment</h2>
+            <form id="homework-form" class="space-y-4">
+                <div>
+                    <label for="lesson-name" class="block text-sm font-medium text-gray-700 mb-1">Lesson/Subject</label>
+                    <select id="lesson-name" class="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 bg-white" required>
+                        <option value="" disabled selected>Select a subject</option>
+                        <option value="Art">Art</option>
+                        <option value="Biology">Biology</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Drama">Drama</option>
+                        <option value="English">English</option>
+                        <option value="French">French</option>
+                        <option value="Geography">Geography</option>
+                        <option value="History">History</option>
+                        <option value="ICT">ICT</option>
+                        <option value="Maths">Maths</option>
+                        <option value="Music">Music</option>
+                        <option value="PE">PE (Physical Education)</option>
+                        <option value="Personal Dev">Personal Dev</option>
+                        <option value="Physics">Physics</option>
+                        <option value="RE">RE (Religious Education)</option>
+                        <option value="Technology">Technology</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="homework-description" class="block text-sm font-medium text-gray-700 mb-1">Homework Description</label>
+                    <textarea id="homework-description" rows="3" placeholder="e.g., Problems 1-15 on Page 204" class="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" required></textarea>
+                </div>
+
+                <div>
+                    <label for="due-date" class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                    <input type="date" id="due-date" class="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
+                </div>
+
+                <button type="submit" class="w-full flex items-center justify-center gap-2 p-3 bg-purple-600 text-white font-semibold rounded-md shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+                    <span>Add Assignment</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Homework List -->
+        <section>
+            <h2 class="text-2xl font-semibold mb-4">Pending Assignments</h2>
+            <div id="homework-list" class="space-y-4">
+                <!-- Assignments will be dynamically inserted here -->
+                <p id="no-assignments-msg" class="text-gray-500 text-center">You have no pending assignments. Great job!</p>
+            </div>
+        </section>
+
+        <!-- Completed Homework List -->
+        <section class="mt-12">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Completed Assignments</h2>
+            <div id="completed-homework-list" class="space-y-4">
+                <!-- Completed assignments will be dynamically inserted here -->
+                <p id="no-completed-msg" class="text-gray-500 text-center">No assignments completed yet.</p>
+            </div>
+        </section>
+
+        <!-- Reward Shop Section -->
+        <section class="mt-12">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Reward Shop</h2>
+            
+            <!-- Add Reward Form (Visible only in Parent Mode) -->
+            <form id="reward-form" class="bg-white p-6 rounded-lg shadow-md mb-6 space-y-4" style="display: none;">
+                <h3 class="text-xl font-semibold">Add a New Reward</h3>
+                <div>
+                    <label for="reward-description" class="block text-sm font-medium text-gray-700 mb-1">Reward Description</label>
+                    <input type="text" id="reward-description" placeholder="e.g., 1 hour of video games" class="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
+                </div>
+                <div>
+                    <label for="reward-cost" class="block text-sm font-medium text-gray-700 mb-1">Point Cost</label>
+                    <input type="number" id="reward-cost" placeholder="e.g., 50" min="1" class="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
+                </div>
+                <button type="submit" class="w-full flex items-center justify-center gap-2 p-3 bg-purple-600 text-white font-semibold rounded-md shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gift"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" x2="12" y1="22" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>
+                    <span>Add Reward</span>
+                </button>
+            </form>
+
+            <!-- Reward List -->
+            <div id="reward-list" class="space-y-4">
+                <!-- Rewards will be dynamically inserted here -->
+                <p id="no-rewards-msg" class="text-gray-500 text-center">No rewards in the shop yet. Add some above!</p>
+            </div>
+        </section>
+
+        <!-- Redeemed Rewards Section -->
+        <section class="mt-12">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Redeemed Rewards History</h2>
+            <div id="redeemed-rewards-list" class="space-y-4">
+                <!-- Redeemed rewards will be dynamically inserted here -->
+                <p id="no-redeemed-msg" class="text-gray-500 text-center">No rewards have been redeemed yet.</p>
+            </div>
+        </section>
+
+
+    </div>
+
+    <!-- Custom Modal for errors -->
+    <div id="error-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50" style="display: none;">
+      <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white transform transition-all scale-100 opacity-100">
+        <div class="mt-3 text-center">
+          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle text-red-600"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+          </div>
+          <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2" id="error-title">Error</h3>
+          <div class="mt-2 px-7 py-3">
+            <p class="text-sm text-gray-500" id="error-message">Something went wrong.</p>
+          </div>
+          <div class="items-center px-4 py-3">
+            <button id="close-modal-btn" class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // --- Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            addDoc, 
+            updateDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            collection,
+            serverTimestamp,
+            setLogLevel,
+            increment,
+            setDoc,
+            query, 
+            orderBy 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuration & State ---
+        const TOGGLE_CODE = '1234'; // The simple parent passcode
+        const POINTS_PER_TASK = 10; // FIXED POINT VALUE
+
+        // These variables are magically provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app, db, auth, userId;
+        let homeworkCollectionRef, profileDocRef, rewardsCollectionRef, redeemedRewardsCollectionRef; 
+        let isAuthReady = false;
+        let currentPoints = 0;
+        let globalRewards = [];
+        let globalRedeemedRewards = []; 
+        let isParentMode = false;
+
+        let unsubscribeFromAssignments = null;
+        let unsubscribeFromProfile = null;
+        let unsubscribeFromRewards = null;
+        let unsubscribeFromRedeemed = null; 
+
+        // --- DOM Elements ---
+        const homeworkForm = document.getElementById('homework-form');
+        const lessonInput = document.getElementById('lesson-name');
+        const descInput = document.getElementById('homework-description');
+        const dateInput = document.getElementById('due-date');
+        const homeworkList = document.getElementById('homework-list');
+        const noAssignmentsMsg = document.getElementById('no-assignments-msg');
+        const completedHomeworkList = document.getElementById('completed-homework-list');
+        const noCompletedMsg = document.getElementById('no-completed-msg');
+        const reminderSection = document.getElementById('reminder-section');
+        const reminderList = document.getElementById('reminder-list');
+        const closeReminderBtn = document.getElementById('close-reminder-btn');
+        const pointsDisplay = document.getElementById('points-display');
+        const rewardForm = document.getElementById('reward-form');
+        const rewardDescInput = document.getElementById('reward-description');
+        const rewardCostInput = document.getElementById('reward-cost');
+        const rewardList = document.getElementById('reward-list');
+        const noRewardsMsg = document.getElementById('no-rewards-msg');
+        const parentModeBtn = document.getElementById('parent-mode-btn');
+        const parentStatusSection = document.getElementById('parent-status-section');
+        const parentSignoutBtn = document.getElementById('parent-signout-btn');
+        const redeemedRewardsList = document.getElementById('redeemed-rewards-list'); 
+        const noRedeemedMsg = document.getElementById('no-redeemed-msg'); 
+        
+        // --- Modal Elements & Functions ---
+        const errorModal = document.getElementById('error-modal');
+        const errorTitle = document.getElementById('error-title');
+        const errorMessage = document.getElementById('error-message');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        closeModalBtn.addEventListener('click', () => {
+            errorModal.style.display = 'none';
+        });
+
+        closeReminderBtn.addEventListener('click', () => {
+            reminderSection.style.display = 'none';
+        });
+
+        function showErrorModal(title, message) {
+            errorTitle.textContent = title;
+            errorMessage.textContent = message;
+            errorModal.style.display = 'flex';
+        }
+
+        // --- Utility Function: Get Today's Date in YYYY-MM-DD format ---
+        function getTodayDateString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // --- Parent Mode Functions ---
+
+        /**
+         * Toggles the UI into or out of "Parent Mode" after checking the code.
+         */
+        function toggleParentMode() {
+            if (isParentMode) {
+                // Sign out of Parent Mode
+                isParentMode = false;
+                parentStatusSection.style.display = 'none';
+                parentModeBtn.textContent = 'Parent Mode';
+                rewardForm.style.display = 'none';
+                renderRewardList(); // Re-render to hide delete buttons
+            } else {
+                // Attempt to sign into Parent Mode
+                const inputCode = window.prompt("Enter Parent Passcode (Default: 1234):");
+                if (inputCode === null || inputCode.trim() === '') {
+                    return; // User cancelled
+                }
+                
+                if (inputCode === TOGGLE_CODE) {
+                    isParentMode = true;
+                    parentStatusSection.style.display = 'flex';
+                    parentModeBtn.textContent = 'Sign Out';
+                    rewardForm.style.display = 'block';
+                    renderRewardList(); // Re-render to show delete buttons
+                } else {
+                    showErrorModal("Access Denied", "Incorrect passcode. Please try again.");
+                }
+            }
+        }
+
+        parentModeBtn.addEventListener('click', toggleParentMode);
+        parentSignoutBtn.addEventListener('click', toggleParentMode); // Reuses the toggle function
+
+
+        // --- Core Functions ---
+
+        /**
+         * Initializes Firebase and sets up authentication.
+         */
+        async function initializeFirebase() {
+            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                console.error("Firebase config is missing.");
+                showErrorModal("Configuration Error", "Could not load app configuration. Please refresh.");
+                return;
+            }
+            
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                setLogLevel('Debug');
+
+                setupAuthListener();
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                showErrorModal("Initialization Error", `Failed to initialize the app: ${error.message}`);
+            }
+        }
+
+        /**
+         * Sets up the authentication listener to get the user ID.
+         */
+        function setupAuthListener() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isAuthReady = true;
+                    console.log("User authenticated:", userId);
+                    
+                    // --- Define Firestore collection paths (Private Data) ---
+                    const userPath = `artifacts/${appId}/users/${userId}`;
+                    homeworkCollectionRef = collection(db, `${userPath}/homework`);
+                    profileDocRef = doc(db, `${userPath}/profile`, 'main');
+                    rewardsCollectionRef = collection(db, `${userPath}/rewards`);
+                    redeemedRewardsCollectionRef = collection(db, `${userPath}/redeemed_rewards`); 
+                    
+                    // Start listening for all data
+                    loadAssignments();
+                    loadProfile();
+                    loadRewards();
+                    loadRedeemedRewards(); 
+
+                } else {
+                    console.log("No user signed in, attempting authentication...");
+                    await signIn();
+                }
+            });
+        }
+
+        /**
+         * Signs the user in (either with token or anonymously).
+         */
+        async function signIn() {
+            try {
+                // Simple exponential backoff for retries
+                for (let i = 0; i < 3; i++) {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                        return; // Success
+                    } catch (e) {
+                        if (i < 2) await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+                        else throw e;
+                    }
+                }
+            } catch (error) {
+                console.error("Error signing in:", error);
+                showErrorModal("Authentication Error", `Failed to sign in: ${error.message}`);
+            }
+        }
+
+        /**
+         * Attaches a real-time listener to the user's profile (for points).
+         */
+        function loadProfile() {
+            if (!isAuthReady) return;
+            if (unsubscribeFromProfile) unsubscribeFromProfile();
+
+            unsubscribeFromProfile = onSnapshot(profileDocRef, (doc) => {
+                currentPoints = doc.data()?.totalPoints || 0;
+                pointsDisplay.textContent = currentPoints;
+                renderRewardList(); 
+            }, (error) => {
+                console.error("Error loading profile:", error);
+                showErrorModal("Profile Error", `Failed to load points: ${error.message}`);
+            });
+        }
+
+        /**
+         * Attaches a real-time listener to the rewards collection.
+         */
+        function loadRewards() {
+            if (!isAuthReady) return;
+            if (unsubscribeFromRewards) unsubscribeFromRewards();
+
+            unsubscribeFromRewards = onSnapshot(rewardsCollectionRef, (snapshot) => {
+                globalRewards = [];
+                snapshot.forEach(doc => {
+                    globalRewards.push({ id: doc.id, ...doc.data() });
+                });
+                // Sort rewards by cost (ascending)
+                globalRewards.sort((a, b) => a.cost - b.cost);
+                renderRewardList(); 
+            }, (error) => {
+                console.error("Error loading rewards:", error);
+                showErrorModal("Rewards Error", `Failed to load rewards: ${error.message}`);
+            });
+        }
+
+        /**
+         * Renders the list of rewards to the DOM.
+         */
+        function renderRewardList() {
+            rewardList.innerHTML = ''; 
+
+            if (globalRewards.length === 0) {
+                rewardList.appendChild(noRewardsMsg);
+                return;
+            }
+
+            globalRewards.forEach(reward => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-lg shadow-sm flex items-center justify-between gap-4';
+                
+                const canRedeem = currentPoints >= reward.cost;
+
+                card.innerHTML = `
+                    <div class="flex-grow min-w-0">
+                        <p class="text-lg font-semibold text-gray-900 break-words">${reward.description}</p>
+                        <p class="text-sm font-medium ${canRedeem ? 'text-green-600' : 'text-red-600'}">
+                            Cost: ${reward.cost} Points
+                        </p>
+                    </div>
+                    <div class="flex-shrink-0 flex gap-2">
+                        <button class="redeem-btn p-2 bg-purple-600 text-white font-semibold rounded-md shadow-sm hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm" title="Redeem" ${canRedeem ? '' : 'disabled'}>
+                            Redeem
+                        </button>
+                        ${isParentMode ? `
+                            <button class="delete-reward-btn text-gray-400 hover:text-red-600 transition-colors" title="Delete Reward">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+
+                // Event Listeners for reward card
+                card.querySelector('.redeem-btn').addEventListener('click', () => {
+                    redeemReward(reward.cost, reward.id, reward.description);
+                });
+                
+                const deleteButton = card.querySelector('.delete-reward-btn');
+                if (deleteButton) {
+                    deleteButton.addEventListener('click', () => {
+                        deleteReward(reward.id);
+                    });
+                }
+
+                rewardList.appendChild(card);
+            });
+        }
+
+        /**
+         * Attaches a real-time listener to the redeemed rewards collection.
+         */
+        function loadRedeemedRewards() {
+            if (!isAuthReady) return;
+            if (unsubscribeFromRedeemed) unsubscribeFromRedeemed();
+
+            // Order by redeemedAt descending (newest first)
+            const q = query(redeemedRewardsCollectionRef, orderBy('redeemedAt', 'desc'));
+
+            unsubscribeFromRedeemed = onSnapshot(q, (snapshot) => {
+                globalRedeemedRewards = [];
+                snapshot.forEach(doc => {
+                    globalRedeemedRewards.push({ id: doc.id, ...doc.data() });
+                });
+                renderRedeemedRewards(); 
+            }, (error) => {
+                console.error("Error loading redeemed rewards:", error);
+                showErrorModal("History Error", `Failed to load redeemed rewards: ${error.message}`);
+            });
+        }
+        
+        /**
+         * Renders the list of redeemed rewards to the DOM.
+         */
+        function renderRedeemedRewards() {
+            redeemedRewardsList.innerHTML = ''; 
+
+            if (globalRedeemedRewards.length === 0) {
+                redeemedRewardsList.appendChild(noRedeemedMsg);
+                return;
+            }
+
+            globalRedeemedRewards.forEach(reward => {
+                const card = document.createElement('div');
+                // Styling for history items
+                card.className = 'bg-gray-100 p-3 rounded-lg border border-purple-200 flex items-center justify-between gap-4';
+                
+                let redeemedDate = 'Unknown Date';
+                if (reward.redeemedAt && reward.redeemedAt.toDate) {
+                    // Convert Firebase Timestamp to readable date string
+                    redeemedDate = reward.redeemedAt.toDate().toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                card.innerHTML = `
+                    <div class="flex-grow min-w-0">
+                        <p class="text-base font-medium text-gray-800 break-words">${reward.description}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Redeemed on: ${redeemedDate}</p>
+                    </div>
+                    <div class="flex-shrink-0 text-right">
+                        <span class="text-sm font-semibold text-red-600">- ${reward.cost} Pts</span>
+                    </div>
+                `;
+
+                redeemedRewardsList.appendChild(card);
+            });
+        }
+
+
+        /**
+         * Attaches a real-time listener to the homework collection.
+         */
+        function loadAssignments() {
+            if (!isAuthReady || !homeworkCollectionRef) {
+                return;
+            }
+            
+            if (unsubscribeFromAssignments) {
+                unsubscribeFromAssignments();
+            }
+            
+            // Note: Not ordering by dueDate in Firestore to avoid index issues. Client-side sort instead.
+            unsubscribeFromAssignments = onSnapshot(homeworkCollectionRef, (snapshot) => {
+                let assignments = [];
+                snapshot.forEach(doc => {
+                    assignments.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Client-side sort by due date (Ascending)
+                assignments.sort((a, b) => {
+                    const dateA = new Date(a.dueDate);
+                    const dateB = new Date(b.dueDate);
+                    if (isNaN(dateA)) return 1;
+                    if (isNaN(dateB)) return -1;
+                    return dateA - dateB;
+                });
+
+                renderAssignments(assignments);
+
+            }, (error) => {
+                console.error("Error getting assignments:", error);
+                showErrorModal("Data Error", `Failed to load assignments: ${error.message}`);
+            });
+        }
+
+        /**
+         * Renders the list of assignments to the DOM.
+         */
+        function renderAssignments(assignments) {
+            homeworkList.innerHTML = '';
+            completedHomeworkList.innerHTML = ''; 
+
+            const pendingAssignments = assignments.filter(a => !a.isCompleted);
+            const completedAssignments = assignments.filter(a => a.isCompleted);
+
+            // --- Reminder Logic ---
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); 
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const dueSoon = pendingAssignments.filter(a => {
+                const dueDate = new Date(a.dueDate + 'T00:00:00'); 
+                dueDate.setHours(0, 0, 0, 0);
+                return dueDate.getTime() === today.getTime() || dueDate.getTime() === tomorrow.getTime();
+            });
+
+            renderReminders(dueSoon, today.getTime());
+            // --- End Reminder Logic ---
+
+            if (pendingAssignments.length === 0) {
+                homeworkList.appendChild(noAssignmentsMsg);
+            } else {
+                pendingAssignments.forEach(assignment => {
+                    const assignmentElement = createAssignmentElement(assignment.id, assignment);
+                    homeworkList.appendChild(assignmentElement);
+                });
+            }
+            
+            if (completedAssignments.length === 0) {
+                completedHomeworkList.appendChild(noCompletedMsg);
+            } else {
+                completedAssignments.forEach(assignment => {
+                    const assignmentElement = createAssignmentElement(assignment.id, assignment);
+                    completedHomeworkList.appendChild(assignmentElement);
+                });
+            }
+        }
+
+        /**
+         * Renders the "Due Soon" reminders.
+         */
+        function renderReminders(dueSoonAssignments, todayTimestamp) {
+            if (dueSoonAssignments.length === 0) {
+                reminderSection.style.display = 'none';
+                return;
+            }
+
+            reminderList.innerHTML = ''; 
+            
+            dueSoonAssignments.forEach(a => {
+                const li = document.createElement('li');
+                const dueDate = new Date(a.dueDate + 'T00:00:00');
+                let dayText;
+
+                if (dueDate.getTime() === todayTimestamp) {
+                    dayText = 'Today';
+                } else {
+                    dayText = 'Tomorrow';
+                }
+
+                li.className = 'text-sm font-medium';
+                li.textContent = `${a.lesson}: ${a.description} (Due ${dayText})`;
+                reminderList.appendChild(li);
+            });
+
+            reminderSection.style.display = 'block';
+        }
+
+        /**
+         * Creates the HTML structure for a single assignment card.
+         */
+        function createAssignmentElement(id, assignment) {
+            const card = document.createElement('div');
+            card.className = `task-card bg-white p-4 rounded-xl shadow-md flex items-center justify-between transition-all ${assignment.isCompleted ? 'opacity-80 border-l-4 border-green-500' : 'border-l-4 border-purple-500 hover:shadow-lg'}`;
+
+            const date = new Date(assignment.dueDate + 'T00:00:00');
+            const today = new Date(getTodayDateString() + 'T00:00:00');
+            const diffTime = date.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            let dateText = `Due: ${assignment.dueDate}`;
+            let dateClass = 'text-gray-500';
+
+            if (diffDays === 0 && !assignment.isCompleted) {
+                dateText = 'DUE TODAY!';
+                dateClass = 'text-red-600 font-bold';
+            } else if (diffDays === 1 && !assignment.isCompleted) {
+                dateText = 'Due Tomorrow';
+                dateClass = 'text-orange-500 font-semibold';
+            } else if (diffDays < 0 && !assignment.isCompleted) {
+                dateText = 'OVERDUE!';
+                dateClass = 'text-red-700 font-extrabold';
+            }
+
+            card.innerHTML = `
+                <div class="flex items-center space-x-3 flex-grow min-w-0">
+                    <input type="checkbox" id="task-${id}" class="task-checkbox h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500" ${assignment.isCompleted ? 'checked' : ''}>
+                    <div class="min-w-0">
+                        <label for="task-${id}" class="task-text text-lg font-semibold text-purple-700 block truncate">${assignment.lesson}:</label>
+                        <p class="task-due text-gray-700 text-sm mt-0.5 break-words">${assignment.description}</p>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 text-right space-y-1 ml-4">
+                    <p class="${dateClass} text-sm font-medium">${dateText}</p>
+                    <button data-id="${id}" class="delete-btn text-gray-400 hover:text-red-600 transition-colors" title="Delete Assignment">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
+                    </button>
+                </div>
+            `;
+
+            // Attach event listeners
+            card.querySelector('.task-checkbox').addEventListener('change', () => {
+                toggleAssignmentCompletion(id, assignment.isCompleted);
+            });
+
+            card.querySelector('.delete-btn').addEventListener('click', () => {
+                deleteAssignment(id);
+            });
+
+            return card;
+        }
+
+        // --- Assignment CRUD Operations ---
+
+        /**
+         * Adds a new assignment to Firestore.
+         */
+        async function addAssignment(assignmentData) {
+            try {
+                await addDoc(homeworkCollectionRef, {
+                    ...assignmentData,
+                    isCompleted: false,
+                    createdAt: serverTimestamp()
+                });
+            } catch (error) {
+                console.error("Error adding assignment:", error);
+                showErrorModal("Save Error", `Failed to add assignment: ${error.message}`);
+            }
+        }
+
+        /**
+         * Toggles the completion status and updates points.
+         */
+        async function toggleAssignmentCompletion(id, isCurrentlyCompleted) {
+            const assignmentDocRef = doc(db, homeworkCollectionRef.path, id);
+            
+            // Determine point change (increment for complete, decrement for incomplete)
+            const pointChange = isCurrentlyCompleted ? POINTS_PER_TASK * -1 : POINTS_PER_TASK;
+
+            try {
+                // 1. Update assignment status
+                await updateDoc(assignmentDocRef, {
+                    isCompleted: !isCurrentlyCompleted,
+                    completedAt: !isCurrentlyCompleted ? serverTimestamp() : null
+                });
+
+                // 2. Update user points (atomically)
+                await setDoc(profileDocRef, {
+                    totalPoints: increment(pointChange)
+                }, { merge: true });
+
+            } catch (error) {
+                console.error("Error toggling completion:", error);
+                showErrorModal("Update Error", `Failed to update status or points: ${error.message}`);
+            }
+        }
+
+        /**
+         * Deletes an assignment from Firestore.
+         */
+        async function deleteAssignment(id) {
+            // Note: We don't adjust points upon deletion to keep the points system simpler 
+            // (points are earned upon completion, regardless of later deletion).
+            try {
+                const assignmentDocRef = doc(db, homeworkCollectionRef.path, id);
+                await deleteDoc(assignmentDocRef);
+            } catch (error) {
+                console.error("Error deleting assignment:", error);
+                showErrorModal("Deletion Error", `Failed to delete assignment: ${error.message}`);
+            }
+        }
+
+        // --- Reward CRUD Operations ---
+        
+        /**
+         * Adds a new reward to the rewards collection.
+         */
+        async function addReward(rewardData) {
+            try {
+                await addDoc(rewardsCollectionRef, {
+                    ...rewardData,
+                    createdAt: serverTimestamp()
+                });
+            } catch (error) {
+                console.error("Error adding reward:", error);
+                showErrorModal("Reward Save Error", `Failed to add reward: ${error.message}`);
+            }
+        }
+
+        /**
+         * Deletes a reward from the rewards collection.
+         */
+        async function deleteReward(id) {
+            try {
+                const rewardDocRef = doc(db, rewardsCollectionRef.path, id);
+                await deleteDoc(rewardDocRef);
+            } catch (error) {
+                console.error("Error deleting reward:", error);
+                showErrorModal("Reward Deletion Error", `Failed to delete reward: ${error.message}`);
+            }
+        }
+
+        /**
+         * Redeems a reward, decrementing points and logging the transaction.
+         */
+        async function redeemReward(cost, rewardId, description) {
+            if (currentPoints < cost) {
+                showErrorModal("Redemption Failed", "You do not have enough points to redeem this reward.");
+                return;
+            }
+
+            try {
+                // 1. Atomically update points (decrement)
+                await setDoc(profileDocRef, {
+                    totalPoints: increment(-cost)
+                }, { merge: true });
+
+                // 2. Log the redeemed reward
+                await addDoc(redeemedRewardsCollectionRef, {
+                    rewardId: rewardId,
+                    description: description,
+                    cost: cost,
+                    redeemedAt: serverTimestamp()
+                });
+
+            } catch (error) {
+                console.error("Error redeeming reward:", error);
+                showErrorModal("Redemption Error", `Failed to redeem reward: ${error.message}`);
+            }
+        }
+
+        // --- Event Listeners ---
+
+        homeworkForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const lesson = lessonInput.value.trim();
+            const description = descInput.value.trim();
+            const dueDate = dateInput.value;
+
+            if (lesson && description && dueDate) {
+                addAssignment({
+                    lesson: lesson,
+                    description: description,
+                    dueDate: dueDate
+                });
+
+                // Clear form
+                lessonInput.value = '';
+                descInput.value = '';
+                // dateInput will keep the min date set
+            }
+        });
+
+        rewardForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const description = rewardDescInput.value.trim();
+            const cost = parseInt(rewardCostInput.value, 10);
+
+            if (description && cost > 0) {
+                addReward({
+                    description: description,
+                    cost: cost
+                });
+
+                // Clear form
+                rewardDescInput.value = '';
+                rewardCostInput.value = '';
+            } else if (cost <= 0) {
+                showErrorModal("Invalid Cost", "Reward cost must be a positive number.");
+            }
+        });
+
+        // Set min date for due date input to today
+        dateInput.setAttribute('min', getTodayDateString());
+
+
+        // --- Initialization ---
+        window.onload = initializeFirebase;
+    </script>
+</body>
+</html>
